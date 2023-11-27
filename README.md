@@ -3,7 +3,7 @@
 **News**:
  * The code and pre-trained models for all datasets will be released soon!
  * :fire: November, 2023. OneFormer3D achieves state-of-the-art in
-   * 3D instance segmentation on ScanNet hidden test [leaderboard](https://kaldir.vc.in.tum.de/scannet_benchmark/semantic_instance_3d)
+   * 3D instance segmentation on ScanNet ([hidden test](https://kaldir.vc.in.tum.de/scannet_benchmark/semantic_instance_3d))
      [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/3d-instance-segmentation-on-scannetv2)](https://paperswithcode.com/sota/3d-instance-segmentation-on-scannetv2?p=oneformer3d-one-transformer-for-unified-point)
      <details>
         <summary>leaderboard screenshot</summary>
@@ -15,8 +15,9 @@
      [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/3d-instance-segmentation-on-s3dis)](https://paperswithcode.com/sota/3d-instance-segmentation-on-s3dis?p=oneformer3d-one-transformer-for-unified-point)
    * 3D panoptic segmentation on ScanNet
      [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/panoptic-segmentation-on-scannetv2)](https://paperswithcode.com/sota/panoptic-segmentation-on-scannetv2?p=oneformer3d-one-transformer-for-unified-point)
-   * 3D object detection on ScanNet (mAP50, w/o TTA)
+   * 3D object detection on ScanNet (w/o TTA)
      [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/3d-object-detection-on-scannetv2)](https://paperswithcode.com/sota/3d-object-detection-on-scannetv2?p=oneformer3d-one-transformer-for-unified-point)
+   * 3D semantic segmentation on ScanNet (val, w/o extra training data) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/semantic-segmentation-on-scannet)](https://paperswithcode.com/sota/semantic-segmentation-on-scannet?p=oneformer3d-one-transformer-for-unified-point)
 
 This repository contains an implementation of OneFormer3D, a 3D (instance, semantic, and panoptic) segmentation method introduced in our paper:
 
