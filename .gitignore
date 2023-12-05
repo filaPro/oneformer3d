@@ -1,0 +1,7 @@
+data
+work_dirs
+.vscode
+__pycache__/
+*.py[cod]
+*$py.class
+*.ipynb
