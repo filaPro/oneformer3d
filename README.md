@@ -65,7 +65,7 @@ python tools/test.py configs/oneformer3d_1xb4_scannet.py \
 
 #### ScanNet200
 
-For ScanNet200 we present the model with [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) backbone, superpoint pooling, selecting all queries, and predicting semantics directly from instance queries. Backbone is initialized from [Mask3D](https://github.com/JonasSchult/Mask3D) checkpoint. It should be [downloaded](https://github.com/filapro/oneformer3d/releases/download/v1.0/mask3d_scannet.pth) and put to `work_dirs/tmp` before training.
+For ScanNet200 we present the model with [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) backbone, superpoint pooling, selecting all queries, and predicting semantics directly from instance queries. Backbone is initialized from [Mask3D](https://github.com/JonasSchult/Mask3D) checkpoint. It should be [downloaded](https://github.com/filapro/oneformer3d/releases/download/v1.0/mask3d_scannet200.pth) and put to `work_dirs/tmp` before training.
 
 ```shell
 # train (with validation)
@@ -102,7 +102,7 @@ Metric values in the table are given for the provided checkpoints and may vary a
 | Dataset | mAP<sub>25</sub> | mAP<sub>50</sub> | mAP | mIoU | PQ | Download |
 |:-------:|:----------------:|:----------------:|:---:|:----:|:--:|:--------:|
 | ScanNet | 86.7 | 78.8 | 59.3 | 76.4 | 70.7 | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet.log) &#124; [config](configs/oneformer3d_1xb4_scannet.py) |
-| ScanNet200 | | | | | | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet200.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet200.log) &#124; [config](configs/oneformer3d_1xb4_scannet200.py) |
+| ScanNet200 | 44.6 | 40.9 | 30.2 | 29.4 | 29.7 | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet200.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet200.log) &#124; [config](configs/oneformer3d_1xb4_scannet200.py) |
 | S3DIS | | | | | | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_s3dis-area5.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_s3dis-area5.log) &#124; [config](configs/oneformer3d_1xb4_s3dis-area5.py) |
 
 ### Example Predictions
