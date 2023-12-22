@@ -134,9 +134,9 @@ class FFN(BaseModule):
             out.append(z)
         return out
 
-
+@MODELS.register_module()
 class QueryDecoder(BaseModule):
-    """Query decoder for SPFormer.
+    """Query decoder.
 
     Args:
         num_layers (int): Number of transformer layers.
@@ -162,6 +162,7 @@ class QueryDecoder(BaseModule):
         self.objectness_flag = objectness_flag
         self.input_proj = nn.Sequential(
             nn.Linear(in_channels, d_model), nn.LayerNorm(d_model), nn.ReLU())
+        self.num_queries = num_instance_queries + num_semantic_queries
         if num_instance_queries + num_semantic_queries > 0:
             self.query = nn.Embedding(num_instance_queries + num_semantic_queries, d_model)
         if num_instance_queries == 0:
@@ -380,7 +381,8 @@ class ScanNetQueryDecoder(QueryDecoder):
                 List[Tensor] or None: Attention masks of len batch_size,
                     each of shape (n_queries_i, n_points_i).
         """
-        cls_preds, sem_preds, pred_scores, pred_masks, attn_masks = [], [], [], [], []
+        cls_preds, sem_preds, pred_scores, pred_masks, attn_masks = \
+            [], [], [], [], []
         for i in range(len(queries)):
             norm_query = self.out_norm(queries[i])
             cls_preds.append(self.out_cls(norm_query))
@@ -445,8 +447,8 @@ class ScanNetQueryDecoder(QueryDecoder):
         inst_feats = [self.input_proj(y) for y in x]
         mask_feats = [self.x_mask(y) for y in x]
         queries = self._get_queries(queries, len(x))
-        cls_pred, sem_pred, pred_score, pred_mask, attn_mask = self._forward_head(
-            queries, mask_feats, last_flag=False)
+        cls_pred, sem_pred, pred_score, pred_mask, attn_mask = \
+            self._forward_head(queries, mask_feats, last_flag=False)
         cls_preds.append(cls_pred)
         sem_preds.append(sem_pred)
         pred_scores.append(pred_score)
@@ -456,8 +458,8 @@ class ScanNetQueryDecoder(QueryDecoder):
             queries = self.self_attn_layers[i](queries)
             queries = self.ffn_layers[i](queries)
             last_flag = i == len(self.cross_attn_layers) - 1
-            cls_pred, sem_pred, pred_score, pred_mask, attn_mask = self._forward_head(
-                queries, mask_feats, last_flag)
+            cls_pred, sem_pred, pred_score, pred_mask, attn_mask = \
+                self._forward_head(queries, mask_feats, last_flag)
             cls_preds.append(cls_pred)
             sem_preds.append(sem_pred)
             pred_scores.append(pred_score)
@@ -465,9 +467,13 @@ class ScanNetQueryDecoder(QueryDecoder):
 
         aux_outputs = [
             dict(
-                cls_preds=cls_pred, sem_preds=sem_pred, masks=masks, scores=scores)
+                cls_preds=cls_pred,
+                sem_preds=sem_pred,
+                masks=masks,
+                scores=scores)
             for cls_pred, sem_pred, scores, masks in zip(
-                cls_preds[:-1], sem_preds[:-1], pred_scores[:-1], pred_masks[:-1])]
+                cls_preds[:-1], sem_preds[:-1],
+                pred_scores[:-1], pred_masks[:-1])]
         return dict(
             cls_preds=cls_preds[-1],
             sem_preds=sem_preds[-1],
@@ -477,6 +483,236 @@ class ScanNetQueryDecoder(QueryDecoder):
 
 
 @MODELS.register_module()
-class S3DISQueryDecoder(QueryDecoder):
-    # Does it have any differences with QueryDecoder?
-    pass
+class OneDataQueryDecoder(BaseModule):
+    """Query decoder. The same as above, but for 2 datasets.
+
+    Args:
+        num_layers (int): Number of transformer layers.
+        num_queries_1dataset (int): Number of queries for the first dataset.
+        num_queries_2dataset (int): Number of queries for the second dataset.
+        num_classes_1dataset (int): Number of classes in the first dataset.
+        num_classes_2dataset (int): Number of classes in the second dataset.
+        prefix_1dataset (string): Prefix for the first dataset.
+        prefix_2dataset (string): Prefix for the second dataset.
+        in_channels (int): Number of input channels.
+        d_model (int): Number of channels for model layers.
+        num_heads (int): Number of head in attention layer.
+        hidden_dim (int): Dimension of attention layer.
+        dropout (float): Dropout rate for transformer layer.
+        activation_fn (str): 'relu' of 'gelu'.
+        iter_pred (bool): Whether to predict iteratively.
+        attn_mask (bool): Whether to use mask attention.
+        pos_enc_flag (bool): Whether to use positional enconding.
+    """
+
+    def __init__(self, 
+                 num_layers, 
+                 num_queries_1dataset, 
+                 num_queries_2dataset,
+                 num_classes_1dataset, 
+                 num_classes_2dataset,
+                 prefix_1dataset,
+                 prefix_2dataset,
+                 in_channels, 
+                 d_model, 
+                 num_heads, 
+                 hidden_dim,
+                 dropout, 
+                 activation_fn, 
+                 iter_pred, 
+                 attn_mask, 
+                 fix_attention, 
+                 **kwargs):
+        super().__init__()
+        self.input_proj = nn.Sequential(
+            nn.Linear(in_channels, d_model), nn.LayerNorm(d_model), nn.ReLU())
+
+        self.num_queries_1dataset = num_queries_1dataset
+        self.num_queries_2dataset = num_queries_2dataset
+
+        self.queries_1dataset = nn.Embedding(num_queries_1dataset, d_model)
+        self.queries_2dataset = nn.Embedding(num_queries_2dataset, d_model)
+        
+        self.prefix_1dataset = prefix_1dataset 
+        self.prefix_2dataset = prefix_2dataset
+
+        self.cross_attn_layers = nn.ModuleList([])
+        self.self_attn_layers = nn.ModuleList([])
+        self.ffn_layers = nn.ModuleList([])
+        for i in range(num_layers):
+            self.cross_attn_layers.append(
+                CrossAttentionLayer(
+                    d_model, num_heads, dropout, fix_attention))
+            self.self_attn_layers.append(
+                SelfAttentionLayer(d_model, num_heads, dropout))
+            self.ffn_layers.append(
+                FFN(d_model, hidden_dim, dropout, activation_fn))
+        self.out_norm = nn.LayerNorm(d_model)
+        self.out_cls_1dataset = nn.Sequential(
+            nn.Linear(d_model, d_model), nn.ReLU(),
+            nn.Linear(d_model, num_classes_1dataset + 1))
+        self.out_cls_2dataset = nn.Sequential(
+            nn.Linear(d_model, d_model), nn.ReLU(),
+            nn.Linear(d_model, num_classes_2dataset + 1))
+        self.out_score = nn.Sequential(
+                nn.Linear(d_model, d_model), nn.ReLU(), nn.Linear(d_model, 1))
+        self.x_mask = nn.Sequential(
+            nn.Linear(in_channels, d_model), nn.ReLU(),
+            nn.Linear(d_model, d_model))
+        self.iter_pred = iter_pred
+        self.attn_mask = attn_mask
+        self.num_classes_1dataset = num_classes_1dataset 
+        self.num_classes_2dataset = num_classes_2dataset
+
+    def _get_queries(self, batch_size, scene_names):
+        """Get query tensor.
+
+        Args:
+            batch_size (int, optional): batch size.
+            scene_names (List[string]): list of len batch size, which 
+                contains scene names.
+        Returns:
+            List[Tensor]: of len batch_size, each of shape
+                (n_queries_i, d_model).
+        """
+        
+        result_queries = []
+        for i in range(batch_size):
+            if self.prefix_1dataset in scene_names[i]:
+                result_queries.append(self.queries_1dataset.weight)
+            elif self.prefix_2dataset in scene_names[i]:
+                result_queries.append(self.queries_2dataset.weight)
+            else:
+                raise RuntimeError(f'Invalid scene name "{scene_names[i]}".')
+
+        return result_queries
+
+    def _forward_head(self, queries, mask_feats, scene_names):
+        """Prediction head forward.
+
+        Args:
+            queries (List[Tensor] | Tensor): List of len batch_size,
+                each of shape (n_queries_i, d_model). Or tensor of
+                shape (batch_size, n_queries, d_model).
+            mask_feats (List[Tensor]): of len batch_size,
+                each of shape (n_points_i, d_model).
+            scene_names (List[string]): list of len batch size, which 
+                contains scene names.
+
+        Returns:
+            Tuple:
+                List[Tensor]: Classification predictions of len batch_size,
+                    each of shape (n_queries_i, n_classes + 1).
+                List[Tensor]: Confidence scores of len batch_size,
+                    each of shape (n_queries_i, 1).
+                List[Tensor]: Predicted masks of len batch_size,
+                    each of shape (n_queries_i, n_points_i).
+                List[Tensor]: Attention masks of len batch_size,
+                    each of shape (n_queries_i, n_points_i).
+        """
+        cls_preds, pred_scores, pred_masks, attn_masks = [], [], [], []
+        for i in range(len(queries)):
+            norm_query = self.out_norm(queries[i])
+            
+            if self.prefix_1dataset in scene_names[i]:
+                cls_preds.append(self.out_cls_1dataset(norm_query))
+            elif self.prefix_2dataset in scene_names[i]:
+                cls_preds.append(self.out_cls_2dataset(norm_query))
+            else:
+                raise RuntimeError(f'Invalid scene name "{scene_names[i]}".')
+            
+
+            pred_scores.append(self.out_score(norm_query))
+            pred_mask = torch.einsum('nd,md->nm', norm_query, mask_feats[i])
+            if self.attn_mask:
+                attn_mask = (pred_mask.sigmoid() < 0.5).bool()
+                attn_mask[torch.where(
+                    attn_mask.sum(-1) == attn_mask.shape[-1])] = False
+                attn_mask = attn_mask.detach()
+                attn_masks.append(attn_mask)
+            pred_masks.append(pred_mask)
+        return  cls_preds, pred_scores, pred_masks, attn_masks
+
+    def forward_simple(self, x, scene_names):
+        """Simple forward pass.
+        
+        Args:
+            x (List[Tensor]): of len batch_size, each of shape
+                (n_points_i, in_channels).
+            scene_names (List[string]): list of len batch size, which 
+                contains scene names.
+        
+        Returns:
+            Dict: with labels, masks, and scores.
+        """
+        inst_feats = [self.input_proj(y) for y in x]
+        mask_feats = [self.x_mask(y) for y in x]
+        queries = self._get_queries(len(x), scene_names)
+        for i in range(len(self.cross_attn_layers)):
+            queries = self.cross_attn_layers[i](inst_feats, queries)
+            queries = self.self_attn_layers[i](queries)
+            queries = self.ffn_layers[i](queries)
+        cls_preds, pred_scores, pred_masks, _ = self._forward_head(
+            queries, mask_feats, scene_names)
+        return dict(
+            cls_preds=cls_preds,
+            masks=pred_masks,
+            scores=pred_scores)
+
+    def forward_iter_pred(self, x, scene_names):
+        """Iterative forward pass.
+        
+        Args:
+            x (List[Tensor]): of len batch_size, each of shape
+                (n_points_i, in_channels).
+            scene_names (List[string]): list of len batch size, which 
+                contains scene names.
+        
+        Returns:
+            Dict: with labels, masks, scores, and aux_outputs.
+        """
+        cls_preds, pred_scores, pred_masks = [], [], []
+        inst_feats = [self.input_proj(y) for y in x]
+        mask_feats = [self.x_mask(y) for y in x]
+        queries = self._get_queries(len(x), scene_names)
+        cls_pred, pred_score, pred_mask, attn_mask = self._forward_head(
+            queries, mask_feats, scene_names)
+        cls_preds.append(cls_pred)
+        pred_scores.append(pred_score)
+        pred_masks.append(pred_mask)
+        for i in range(len(self.cross_attn_layers)):
+            queries = self.cross_attn_layers[i](inst_feats, queries, attn_mask)
+            queries = self.self_attn_layers[i](queries)
+            queries = self.ffn_layers[i](queries)
+            cls_pred, pred_score, pred_mask, attn_mask = self._forward_head(
+                queries, mask_feats, scene_names)
+            cls_preds.append(cls_pred)
+            pred_scores.append(pred_score)
+            pred_masks.append(pred_mask)
+
+        aux_outputs = [
+            {'cls_preds': cls_pred, 'masks': masks, 'scores': scores}
+            for cls_pred, scores, masks in zip(
+                cls_preds[:-1], pred_scores[:-1], pred_masks[:-1])]
+        return dict(
+            cls_preds=cls_preds[-1],
+            masks=pred_masks[-1],
+            scores=pred_scores[-1],
+            aux_outputs=aux_outputs)
+
+    def forward(self, x, scene_names):
+        """Forward pass.
+        
+        Args:
+            x (List[Tensor]): of len batch_size, each of shape
+                (n_points_i, in_channels).
+            scene_names (List[string]): list of len batch size, which 
+                contains scene names.
+        
+        Returns:
+            Dict: with labels, masks, scores, and possibly aux_outputs.
+        """
+        if self.iter_pred:
+            return self.forward_iter_pred(x, scene_names)
+        else:
+            return self.forward_simple(x, scene_names)

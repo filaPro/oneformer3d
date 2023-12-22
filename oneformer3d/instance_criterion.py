@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from scipy.optimize import linear_sum_assignment
 
-from mmengine.structures import InstanceData
+from .structures import InstanceData_
 from mmdet3d.registry import MODELS, TASK_UTILS
 
 
@@ -130,7 +130,7 @@ class InstanceCriterion:
                 List `masks` of len batch_size each of shape
                     (n_queries, n_points)
             insts (List):
-                Ground truth of len batch_size, each InstanceData with
+                Ground truth of len batch_size, each InstanceData_ with
                     `sp_masks` of shape (n_gts_i, n_points_i)
                     `labels_3d` of shape (n_gts_i,)
                     `query_masks` of shape (n_gts_i, n_queries_i).
@@ -145,10 +145,10 @@ class InstanceCriterion:
         if indices is None:
             indices = []
             for i in range(len(insts)):
-                pred_instances = InstanceData(
+                pred_instances = InstanceData_(
                     scores=cls_preds[i],
                     masks=pred_masks[i])
-                gt_instances = InstanceData(
+                gt_instances = InstanceData_(
                     labels=insts[i].labels_3d,
                     masks=insts[i].sp_masks)
                 if insts[i].get('query_masks') is not None:
@@ -221,7 +221,7 @@ class InstanceCriterion:
 
         return loss
 
-    # todo: refactor pred to InstanceData
+    # todo: refactor pred to InstanceData_
     def __call__(self, pred, insts):
         """Loss main function.
 
@@ -234,7 +234,7 @@ class InstanceCriterion:
                     (n_queries, n_points)
                 Dict `aux_preds` with list of cls_preds, scores, and masks.
             insts (List):
-                Ground truth of len batch_size, each InstanceData with
+                Ground truth of len batch_size, each InstanceData_ with
                     `sp_masks` of shape (n_gts_i, n_points_i)
                     `labels_3d` of shape (n_gts_i,)
                     `query_masks` of shape (n_gts_i, n_queries_i).
@@ -249,10 +249,10 @@ class InstanceCriterion:
         # match
         indices = []
         for i in range(len(insts)):
-            pred_instances = InstanceData(
+            pred_instances = InstanceData_(
                 scores=cls_preds[i],
                 masks=pred_masks[i])
-            gt_instances = InstanceData(
+            gt_instances = InstanceData_(
                 labels=insts[i].labels_3d,
                 masks=insts[i].sp_masks)
             if insts[i].get('query_masks') is not None:
@@ -346,9 +346,9 @@ class QueryClassificationCost:
         """Compute match cost.
 
         Args:
-            pred_instances (:obj:`InstanceData`): Predicted instances which
+            pred_instances (:obj:`InstanceData_`): Predicted instances which
                 must contain `scores` of shape (n_queries, n_classes + 1),
-            gt_instances (:obj:`InstanceData`): Ground truth which must contain
+            gt_instances (:obj:`InstanceData_`): Ground truth which must contain
                 `labels` of shape (n_gts,).
 
         Returns:
@@ -373,9 +373,9 @@ class MaskBCECost:
         """Compute match cost.
 
         Args:
-            pred_instances (:obj:`InstanceData`): Predicted instances which
+            pred_instances (:obj:`InstanceData_`): Predicted instances which
                 mast contain `masks` of shape (n_queries, n_points).
-            gt_instances (:obj:`InstanceData`): Ground truth which must contain
+            gt_instances (:obj:`InstanceData_`): Ground truth which must contain
                 `labels` of shape (n_gts,), `masks` of shape (n_gts, n_points).
         
         Returns:
@@ -400,9 +400,9 @@ class MaskDiceCost:
         """Compute match cost.
 
         Args:
-            pred_instances (:obj:`InstanceData`): Predicted instances which
+            pred_instances (:obj:`InstanceData_`): Predicted instances which
                 mast contain `masks` of shape (n_queries, n_points).
-            gt_instances (:obj:`InstanceData`): Ground truth which must contain
+            gt_instances (:obj:`InstanceData_`): Ground truth which must contain
                 `masks` of shape (n_gts, n_points).
         
         Returns:
@@ -430,10 +430,10 @@ class HungarianMatcher:
         """Compute match cost.
 
         Args:
-            pred_instances (:obj:`InstanceData`): Predicted instances which
+            pred_instances (:obj:`InstanceData_`): Predicted instances which
                 can contain `masks` of shape (n_queries, n_points), `scores`
                 of shape (n_queries, n_classes + 1),
-            gt_instances (:obj:`InstanceData`): Ground truth which can contain
+            gt_instances (:obj:`InstanceData_`): Ground truth which can contain
                 `labels` of shape (n_gts,), `masks` of shape (n_gts, n_points).
 
         Returns:
@@ -475,10 +475,10 @@ class SparseMatcher:
         """Compute match cost.
 
         Args:
-            pred_instances (:obj:`InstanceData`): Predicted instances which
+            pred_instances (:obj:`InstanceData_`): Predicted instances which
                 can contain `masks` of shape (n_queries, n_points), `scores`
                 of shape (n_queries, n_classes + 1),
-            gt_instances (:obj:`InstanceData`): Ground truth which can contain
+            gt_instances (:obj:`InstanceData_`): Ground truth which can contain
                 `labels` of shape (n_gts,), `masks` of shape (n_gts, n_points),
                 `query_masks` of shape (n_gts, n_queries).
 
@@ -505,3 +505,220 @@ class SparseMatcher:
             largest=False).values[-1:, :]
         ids = torch.argwhere(cost_value < values)
         return ids[:, 0], ids[:, 1]
+
+
+@MODELS.register_module()
+class OneDataCriterion:
+    """Loss module for SPFormer.
+
+    Args:
+        matcher (Callable): Class for matching queries with gt.
+        loss_weight (List[float]): 4 weights for query classification,
+            mask bce, mask dice, and score losses.
+        non_object_weight (float): no_object weight for query classification.
+        num_classes_1dataset (int): Number of classes in the first dataset.
+        num_classes_2dataset (int): Number of classes in the second dataset.
+        fix_dice_loss_weight (bool): Whether to fix dice loss for
+            batch_size != 4.
+        iter_matcher (bool): Whether to use separate matcher for
+            each decoder layer.
+    """
+
+    def __init__(self, matcher, loss_weight, non_object_weight, 
+                 num_classes_1dataset, num_classes_2dataset,
+                 fix_dice_loss_weight, iter_matcher):
+        self.matcher = TASK_UTILS.build(matcher)
+        self.num_classes_1dataset = num_classes_1dataset
+        self.num_classes_2dataset = num_classes_2dataset
+        self.class_weight_1dataset = [1] * num_classes_1dataset + [non_object_weight]
+        self.class_weight_2dataset = [1] * num_classes_2dataset + [non_object_weight]
+        self.loss_weight = loss_weight
+        self.fix_dice_loss_weight = fix_dice_loss_weight
+        self.iter_matcher = iter_matcher
+
+    def _get_src_permutation_idx(self, indices):
+        # permute predictions following indices
+        batch_idx = torch.cat(
+            [torch.full_like(src, i) for i, (src, _) in enumerate(indices)])
+        src_idx = torch.cat([src for (src, _) in indices])
+        return batch_idx, src_idx
+
+    def get_layer_loss(self, aux_outputs, insts, indices=None):
+        cls_preds = aux_outputs['cls_preds']
+        pred_scores = aux_outputs['scores']
+        pred_masks = aux_outputs['masks']
+
+        if indices is None:
+            indices = []
+            for i in range(len(insts)):
+                pred_instances = InstanceData_(
+                    scores=cls_preds[i],
+                    masks=pred_masks[i])
+                gt_instances = InstanceData_(
+                    labels=insts[i].labels_3d,
+                    masks=insts[i].sp_masks)
+                if insts[i].get('query_masks') is not None:
+                    gt_instances.query_masks = insts[i].query_masks
+                indices.append(self.matcher(pred_instances, gt_instances))
+
+        cls_losses = []
+        for cls_pred, inst, (idx_q, idx_gt) in zip(cls_preds, insts, indices):
+            n_classes = cls_pred.shape[1] - 1
+            cls_target = cls_pred.new_full(
+                (len(cls_pred),), n_classes, dtype=torch.long)
+            cls_target[idx_q] = inst.labels_3d[idx_gt]
+            if cls_pred.shape[1] == self.num_classes_1dataset + 1:
+                cls_losses.append(F.cross_entropy(
+                    cls_pred, cls_target,
+                    cls_pred.new_tensor(self.class_weight_1dataset)))
+            elif cls_pred.shape[1] == self.num_classes_2dataset + 1:
+                cls_losses.append(F.cross_entropy(
+                    cls_pred, cls_target,
+                    cls_pred.new_tensor(self.class_weight_2dataset)))
+            else:
+                raise RuntimeError(
+                    f'Invalid classes number {cls_pred.shape[1]}.')
+
+        cls_loss = torch.mean(torch.stack(cls_losses))
+
+        # 3 other losses
+        score_losses, mask_bce_losses, mask_dice_losses = [], [], []
+        for mask, score, inst, (idx_q, idx_gt) in zip(
+            pred_masks, pred_scores, insts, indices):
+            if len(inst) == 0:
+                continue
+
+            pred_mask = mask[idx_q]
+            tgt_mask = inst.sp_masks[idx_gt]
+            mask_bce_losses.append(F.binary_cross_entropy_with_logits(
+            pred_mask, tgt_mask.float()))
+            mask_dice_losses.append(dice_loss(pred_mask, tgt_mask.float()))
+            
+            # check if skip objectness loss
+            if score is None:
+                continue
+
+            pred_score = score[idx_q]
+            with torch.no_grad():
+                tgt_score = get_iou(pred_mask, tgt_mask).unsqueeze(1)
+
+            filter_id, _ = torch.where(tgt_score > 0.5)
+            if filter_id.numel():
+                tgt_score = tgt_score[filter_id]
+                pred_score = pred_score[filter_id]
+                score_losses.append(F.mse_loss(pred_score, tgt_score))
+        # todo: actually .mean() should be better
+        if len(score_losses):
+            score_loss = torch.stack(score_losses).sum() / len(pred_masks)
+        else:
+            score_loss = 0
+        mask_bce_loss = torch.stack(mask_bce_losses).sum() / len(pred_masks)
+        mask_dice_loss = torch.stack(mask_dice_losses).sum() / len(pred_masks)
+
+        loss = (
+            self.loss_weight[0] * cls_loss +
+            self.loss_weight[1] * mask_bce_loss +
+            self.loss_weight[2] * mask_dice_loss +
+            self.loss_weight[3] * score_loss)
+
+        return loss
+
+    # todo: refactor pred to InstanceData
+    def __call__(self, pred, insts):
+        """Loss main function.
+
+        Args:
+            pred (Dict):
+                List `cls_preds` of shape len batch_size, each of shape
+                    (n_gts, n_classes + 1);
+                List `scores` of len batch_size each of shape (n_gts, 1);
+                List `masks` of len batch_size each of shape (n_gts, n_points).
+                Dict `aux_preds` with list of cls_preds, scores, and masks.
+        """
+        cls_preds = pred['cls_preds']
+        pred_scores = pred['scores']
+        pred_masks = pred['masks']
+
+        # match
+        indices = []
+        for i in range(len(insts)):
+            pred_instances = InstanceData_(
+                scores=cls_preds[i],
+                masks=pred_masks[i])
+            gt_instances = InstanceData_(
+                labels=insts[i].labels_3d,
+                masks=insts[i].sp_masks)
+            if insts[i].get('query_masks') is not None:
+                gt_instances.query_masks = insts[i].query_masks
+            indices.append(self.matcher(pred_instances, gt_instances))
+
+        # class loss
+        cls_losses = []
+        for cls_pred, inst, (idx_q, idx_gt) in zip(cls_preds, insts, indices):
+            n_classes = cls_pred.shape[1] - 1
+            cls_target = cls_pred.new_full(
+                (len(cls_pred),), n_classes, dtype=torch.long)
+            cls_target[idx_q] = inst.labels_3d[idx_gt]            
+            if cls_pred.shape[1] == self.num_classes_1dataset + 1:
+                cls_losses.append(F.cross_entropy(
+                    cls_pred, cls_target,
+                    cls_pred.new_tensor(self.class_weight_1dataset)))
+            elif cls_pred.shape[1] == self.num_classes_2dataset + 1:
+                cls_losses.append(F.cross_entropy(
+                    cls_pred, cls_target,
+                    cls_pred.new_tensor(self.class_weight_2dataset)))
+            else:
+                raise RuntimeError(
+                    f'Invalid classes number {cls_pred.shape[1]}.')
+        
+        cls_loss = torch.mean(torch.stack(cls_losses))
+
+        # 3 other losses
+        score_losses, mask_bce_losses, mask_dice_losses = [], [], []
+        for mask, score, inst, (idx_q, idx_gt) in zip(pred_masks, pred_scores,
+                                                      insts, indices):
+            if len(inst) == 0:
+                continue
+            pred_mask = mask[idx_q]
+            tgt_mask = inst.sp_masks[idx_gt]
+            mask_bce_losses.append(F.binary_cross_entropy_with_logits(
+                pred_mask, tgt_mask.float()))
+            mask_dice_losses.append(dice_loss(pred_mask, tgt_mask.float()))
+
+            # check if skip objectness loss
+            if score is None:
+                continue
+
+            pred_score = score[idx_q]
+            with torch.no_grad():
+                tgt_score = get_iou(pred_mask, tgt_mask).unsqueeze(1)
+
+            filter_id, _ = torch.where(tgt_score > 0.5)
+            if filter_id.numel():
+                tgt_score = tgt_score[filter_id]
+                pred_score = pred_score[filter_id]
+                score_losses.append(F.mse_loss(pred_score, tgt_score))
+        # todo: actually .mean() should be better
+        if len(score_losses):
+            score_loss = torch.stack(score_losses).sum() / len(pred_masks)
+        else:
+            score_loss = 0
+        mask_bce_loss = torch.stack(mask_bce_losses).sum() / len(pred_masks)
+        mask_dice_loss = torch.stack(mask_dice_losses).sum()
+
+        if self.fix_dice_loss_weight:
+            mask_dice_loss = mask_dice_loss / len(pred_masks) * 4
+
+        loss = (
+            self.loss_weight[0] * cls_loss +
+            self.loss_weight[1] * mask_bce_loss +
+            self.loss_weight[2] * mask_dice_loss +
+            self.loss_weight[3] * score_loss)
+
+        if 'aux_outputs' in pred:
+            if self.iter_matcher:
+                indices = None
+            for i, aux_outputs in enumerate(pred['aux_outputs']):
+                loss += self.get_layer_loss(aux_outputs, insts, indices)
+
+        return {'inst_loss': loss}
