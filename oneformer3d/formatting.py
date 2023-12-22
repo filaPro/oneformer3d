@@ -1,7 +1,6 @@
 # Adapted from mmdet3d/datasets/transforms/formating.py
 import numpy as np
-from mmengine.structures import InstanceData
-
+from .structures import InstanceData_
 from mmdet3d.datasets.transforms import Pack3DDetInputs
 from mmdet3d.datasets.transforms.formating import to_tensor
 from mmdet3d.registry import TRANSFORMS
@@ -98,8 +97,8 @@ class Pack3DDetInputs_(Pack3DDetInputs):
             results['gt_seg_map'] = results['gt_seg_map'][None, ...]
 
         data_sample = Det3DDataSample()
-        gt_instances_3d = InstanceData()
-        gt_instances = InstanceData()
+        gt_instances_3d = InstanceData_()
+        gt_instances = InstanceData_()
         gt_pts_seg = PointData()
 
         img_metas = {}

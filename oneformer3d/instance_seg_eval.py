@@ -6,7 +6,7 @@ import numpy as np
 from mmengine.logging import print_log
 from terminaltables import AsciiTable
 
-from mmdet3d.evaluation.functional.instance_seg_eval import scannet_eval
+from .evaluate_semantic_instance import scannet_eval
 
 
 # 1) We fix this line: info[file_name]['mask'] = mask[i].
@@ -26,9 +26,9 @@ def aggregate_predictions(masks, labels, scores, valid_class_ids):
     """
     infos = []
     for id, (mask, label, score) in enumerate(zip(masks, labels, scores)):
-        mask = mask.clone().numpy()
-        label = label.clone().numpy()
-        score = score.clone().numpy()
+        mask = mask.numpy()
+        label = label.numpy()
+        score = score.numpy()
         info = dict()
         for i in range(mask.shape[0]):
             # match pred_instance['filename'] from assign_instances_for_scan
@@ -70,9 +70,6 @@ def rename_gt(gt_semantic_masks, gt_instance_masks, valid_class_ids):
         renamed_instance_masks.append(instance_mask)
     return renamed_instance_masks
 
-
-# No changes in this function. But it now calls updated aggregate_predictions
-# and rename_gt.
 def instance_seg_eval(gt_semantic_masks,
                       gt_instance_masks,
                       pred_instance_masks,
@@ -121,12 +118,12 @@ def instance_seg_eval(gt_semantic_masks,
         valid_class_ids=valid_class_ids,
         class_labels=class_labels,
         id_to_label=id_to_label)
-    header = ['classes', 'AP_0.25', 'AP_0.50', 'AP']
+    header = ['classes', 'AP_0.25', 'AP_0.50', 'AP', 'Prec_0.50', 'Rec_0.50']
     rows = []
     for label, data in metrics['classes'].items():
-        aps = [data['ap25%'], data['ap50%'], data['ap']]
+        aps = [data['ap25%'], data['ap50%'], data['ap'], data['prec50%'], data['rec50%']]
         rows.append([label] + [f'{ap:.4f}' for ap in aps])
-    aps = metrics['all_ap_25%'], metrics['all_ap_50%'], metrics['all_ap']
+    aps = metrics['all_ap_25%'], metrics['all_ap_50%'], metrics['all_ap'], metrics['all_prec_50%'], metrics['all_rec_50%']
     footer = ['Overall'] + [f'{ap:.4f}' for ap in aps]
     table = AsciiTable([header] + rows + [footer])
     table.inner_footing_row_border = True

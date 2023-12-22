@@ -1,7 +1,6 @@
 ## OneFormer3D: One Transformer for Unified Point Cloud Segmentation
 
 **News**:
- * Remaining code and models for S3DIS will be released soon!
  * :fire: November, 2023. OneFormer3D achieves state-of-the-art in
    * 3D instance segmentation on ScanNet ([hidden test](https://kaldir.vc.in.tum.de/scannet_benchmark/semantic_instance_3d))
      [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/3d-instance-segmentation-on-scannetv2)](https://paperswithcode.com/sota/3d-instance-segmentation-on-scannetv2?p=oneformer3d-one-transformer-for-unified-point)
@@ -9,12 +8,10 @@
         <summary>leaderboard screenshot</summary>
         <img src="https://github.com/filaPro/oneformer3d/assets/6030962/e8890fd9-336d-4851-85cb-06fbbb60abe3" alt="ScanNet leaderboard"/>
      </details>
-   * 3D semantic segmentation on S3DIS (Area-5)
-     [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/3d-semantic-segmentation-on-s3dis)](https://paperswithcode.com/sota/3d-semantic-segmentation-on-s3dis?p=oneformer3d-one-transformer-for-unified-point)
    * 3D instance segmentation on S3DIS (6-Fold)
      [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/3d-instance-segmentation-on-s3dis)](https://paperswithcode.com/sota/3d-instance-segmentation-on-s3dis?p=oneformer3d-one-transformer-for-unified-point)
    * 3D panoptic segmentation on ScanNet
-     [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/panoptic-segmentation-on-scannetv2)](https://paperswithcode.com/sota/panoptic-segmentation-on-scannetv2?p=oneformer3d-one-transformer-for-unified-point)
+     [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/panoptic-segmentation-on-scannet)](https://paperswithcode.com/sota/panoptic-segmentation-on-scannet?p=oneformer3d-one-transformer-for-unified-point)
    * 3D object detection on ScanNet (w/o TTA)
      [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/3d-object-detection-on-scannetv2)](https://paperswithcode.com/sota/3d-object-detection-on-scannetv2?p=oneformer3d-one-transformer-for-unified-point)
    * 3D semantic segmentation on ScanNet (val, w/o extra training data) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/oneformer3d-one-transformer-for-unified-point/semantic-segmentation-on-scannet)](https://paperswithcode.com/sota/semantic-segmentation-on-scannet?p=oneformer3d-one-transformer-for-unified-point)
@@ -56,7 +53,7 @@ For ScanNet we present the model with [SpConv](https://github.com/traveller59/sp
 python tools/train.py configs/oneformer3d_1xb4_scannet.py
 # test
 python tools/fix_spconv_checkpoint.py \
-    --in-path work_dirs/oneformer3d_1xb4_scannet/epoch_512.pth \ 
+    --in-path work_dirs/oneformer3d_1xb4_scannet/epoch_512.pth \
     --out-path work_dirs/oneformer3d_1xb4_scannet/epoch_512.pth
 python tools/test.py configs/oneformer3d_1xb4_scannet.py \
     work_dirs/oneformer3d_1xb4_scannet/epoch_512.pth
@@ -77,33 +74,33 @@ python tools/test.py configs/oneformer3d_1xb4_scannet200.py \
 
 #### S3DIS
 
-For S3DIS we present the model with [SpConv](https://github.com/traveller59/spconv) backbone, w/o superpoint pooling, w/o query selection, and with separate semantic queries. Backbone is pretrained on Structured3D and ScanNet. It can be [downloaded](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb2_scannet-and-structured3d.pth) and put to `work_dirs/tmp` before training or trained with our code. We train the model on Areas 1, 2, 3, 4, 6 and test on Area-5. To change this split feel free to modify `train_area` and `test_area` parameters in config.
+For S3DIS we present the model with [SpConv](https://github.com/traveller59/spconv) backbone, w/o superpoint pooling, w/o query selection, and with separate semantic queries. Backbone is pretrained on Structured3D and ScanNet. It can be [downloaded](https://github.com/filapro/oneformer3d/releases/download/v1.0/instance-only-oneformer3d_1xb2_scannet-and-structured3d.pth) and put to `work_dirs/tmp` before training or trained with our code. We train the model on Areas 1, 2, 3, 4, 6 and test on Area 5. To change this split feel free to modify `train_area` and `test_area` parameters in config.
 
 ```shell
 # pre-train
-python tools/train.py configs/oneformer3d_1xb2_scannet-and-structured3d.py
+python tools/train.py configs/instance-only-oneformer3d_1xb2_scannet-and-structured3d.py
 python tools/fix_spconv_checkpoint.py \
-    --in-path work_dirs/oneformer3d_1xb2_scannet-and-structured3d/epoch_512.pth \ 
-    --out-path work_dirs/tmp/oneformer3d_1xb2_scannet-and-structured3d.pth
+    --in-path work_dirs/instance-only-oneformer3d_1xb2_scannet-and-structured3d/iter_600000.pth \
+    --out-path work_dirs/tmp/instance-only-oneformer3d_1xb2_scannet-and-structured3d.pth
 # train (with validation)
-python tools/train.py configs/oneformer3d_1xb2_s3dis-area5.py
+python tools/train.py configs/oneformer3d_1xb2_s3dis-area-5.py
 # test
 python tools/fix_spconv_checkpoint.py \
-    --in-path work_dirs/oneformer3d_1xb2_s3dis-area5/epoch_512.pth \ 
-    --out-path work_dirs/oneformer3d_1xb2_s3dis-area5/epoch_512.pth
-python tools/test.py configs/oneformer3d_1xb2_s3dis-area5.py \
-    work_dirs/oneformer3d_1xb2_s3dis-area5/epoch_512.pth
+    --in-path work_dirs/oneformer3d_1xb2_s3dis-area-5/epoch_512.pth \
+    --out-path work_dirs/oneformer3d_1xb2_s3dis-area-5/epoch_512.pth
+python tools/test.py configs/oneformer3d_1xb2_s3dis-area-5.py \
+    work_dirs/oneformer3d_1xb2_s3dis-area-5/epoch_512.pth
 ```
 
 ### Models
 
-Metric values in the table are given for the provided checkpoints and may vary a little from the ones in our paper. Due to randomness it may be needed to run the same train config for several times to achieve the best metrics.
+Metric values in the table are given for the provided checkpoints and may vary a little from the ones in our paper. Due to randomness it may be needed to run training with the same config for several times to achieve the best metrics.
 
 | Dataset | mAP<sub>25</sub> | mAP<sub>50</sub> | mAP | mIoU | PQ | Download |
 |:-------:|:----------------:|:----------------:|:---:|:----:|:--:|:--------:|
 | ScanNet | 86.7 | 78.8 | 59.3 | 76.4 | 70.7 | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet.log) &#124; [config](configs/oneformer3d_1xb4_scannet.py) |
 | ScanNet200 | 44.6 | 40.9 | 30.2 | 29.4 | 29.7 | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet200.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet200.log) &#124; [config](configs/oneformer3d_1xb4_scannet200.py) |
-| S3DIS | | | | | | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_s3dis-area5.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_s3dis-area5.log) &#124; [config](configs/oneformer3d_1xb4_s3dis-area5.py) |
+| S3DIS | 80.6 | 72.7 | 58.0 | 71.9 | 64.6 | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb2_s3dis-area-5.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb2_s3dis-area-5.log) &#124; [config](configs/oneformer3d_1xb2_s3dis-area-5.py) |
 
 ### Example Predictions
 

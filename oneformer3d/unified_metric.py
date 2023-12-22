@@ -3,6 +3,7 @@ import numpy as np
 
 from mmengine.logging import MMLogger
 
+from mmdet3d.evaluation import InstanceSegMetric
 from mmdet3d.evaluation.metrics import SegMetric
 from mmdet3d.registry import METRICS
 from mmdet3d.evaluation import panoptic_seg_eval, seg_eval
@@ -84,7 +85,25 @@ class UnifiedSegMetric(SegMetric):
         pred_masks_pan = []
 
         for eval_ann, single_pred_results in results:
-            gt_masks_pan.append(eval_ann)
+            
+            if self.metric_meta['dataset_name'] == 'S3DIS':
+                pan_gt = {}
+                pan_gt['pts_semantic_mask'] = eval_ann['pts_semantic_mask']
+                pan_gt['pts_instance_mask'] = \
+                                    eval_ann['pts_instance_mask'].copy()
+
+                for stuff_cls in self.stuff_class_inds:
+                    pan_gt['pts_instance_mask'][\
+                        pan_gt['pts_semantic_mask'] == stuff_cls] = \
+                                    np.max(pan_gt['pts_instance_mask']) + 1
+
+                pan_gt['pts_instance_mask'] = np.unique(
+                                                pan_gt['pts_instance_mask'],
+                                                return_inverse=True)[1]
+                gt_masks_pan.append(pan_gt)
+            else:
+                gt_masks_pan.append(eval_ann)
+            
             pred_masks_pan.append({
                 'pts_instance_mask': \
                     single_pred_results['pts_instance_mask'][1],
@@ -96,14 +115,18 @@ class UnifiedSegMetric(SegMetric):
             pred_semantic_masks_sem_task.append(
                 single_pred_results['pts_semantic_mask'][0])
 
-            sem_mask, inst_mask = self.map_inst_markup(
-                eval_ann['pts_semantic_mask'].copy(), 
-                eval_ann['pts_instance_mask'].copy(), 
-                self.valid_class_ids[num_stuff_cls:],
-                num_stuff_cls)
-
-            gt_semantic_masks_inst_task.append(sem_mask)
-            gt_instance_masks_inst_task.append(inst_mask)           
+            if self.metric_meta['dataset_name'] == 'S3DIS':
+                gt_semantic_masks_inst_task.append(eval_ann['pts_semantic_mask'])
+                gt_instance_masks_inst_task.append(eval_ann['pts_instance_mask'])  
+            else:
+                sem_mask, inst_mask = self.map_inst_markup(
+                    eval_ann['pts_semantic_mask'].copy(), 
+                    eval_ann['pts_instance_mask'].copy(), 
+                    self.valid_class_ids[num_stuff_cls:],
+                    num_stuff_cls)
+                gt_semantic_masks_inst_task.append(sem_mask)
+                gt_instance_masks_inst_task.append(inst_mask)           
+            
             pred_instance_masks_inst_task.append(
                 torch.tensor(single_pred_results['pts_instance_mask'][0]))
             pred_instance_labels.append(
@@ -123,16 +146,28 @@ class UnifiedSegMetric(SegMetric):
             ignore_index[0],
             logger=logger)
 
-        # :-1 for unlabeled
-        ret_inst = instance_seg_eval(
-            gt_semantic_masks_inst_task,
-            gt_instance_masks_inst_task,
-            pred_instance_masks_inst_task,
-            pred_instance_labels,
-            pred_instance_scores,
-            valid_class_ids=self.valid_class_ids[num_stuff_cls:],
-            class_labels=classes[num_stuff_cls:-1],
-            logger=logger)
+        if self.metric_meta['dataset_name'] == 'S3DIS':
+            # :-1 for unlabeled
+            ret_inst = instance_seg_eval(
+                gt_semantic_masks_inst_task,
+                gt_instance_masks_inst_task,
+                pred_instance_masks_inst_task,
+                pred_instance_labels,
+                pred_instance_scores,
+                valid_class_ids=self.valid_class_ids,
+                class_labels=classes[:-1],
+                logger=logger)
+        else:
+            # :-1 for unlabeled
+            ret_inst = instance_seg_eval(
+                gt_semantic_masks_inst_task,
+                gt_instance_masks_inst_task,
+                pred_instance_masks_inst_task,
+                pred_instance_labels,
+                pred_instance_scores,
+                valid_class_ids=self.valid_class_ids[num_stuff_cls:],
+                class_labels=classes[num_stuff_cls:-1],
+                logger=logger)
 
         metrics = dict()
         for ret, keys in zip((ret_sem, ret_inst, ret_pan), self.logger_keys):
@@ -167,3 +202,54 @@ class UnifiedSegMetric(SegMetric):
         pts_semantic_mask = mapping[pts_semantic_mask]
         
         return pts_semantic_mask, pts_instance_mask
+
+
+@METRICS.register_module()
+class InstanceSegMetric_(InstanceSegMetric):
+    """The only difference with InstanceSegMetric is that following ScanNet
+    evaluator we accept instance prediction as a boolean tensor of shape
+    (n_points, n_instances) instead of integer tensor of shape (n_points, ).
+
+    For this purpose we only replace instance_seg_eval call.
+    """
+
+    def compute_metrics(self, results):
+        """Compute the metrics from processed results.
+
+        Args:
+            results (list): The processed results of each batch.
+
+        Returns:
+            Dict[str, float]: The computed metrics. The keys are the names of
+            the metrics, and the values are corresponding results.
+        """
+        logger: MMLogger = MMLogger.get_current_instance()
+
+        self.classes = self.dataset_meta['classes']
+        self.valid_class_ids = self.dataset_meta['seg_valid_class_ids']
+
+        gt_semantic_masks = []
+        gt_instance_masks = []
+        pred_instance_masks = []
+        pred_instance_labels = []
+        pred_instance_scores = []
+
+        for eval_ann, single_pred_results in results:
+            gt_semantic_masks.append(eval_ann['pts_semantic_mask'])
+            gt_instance_masks.append(eval_ann['pts_instance_mask'])
+            pred_instance_masks.append(
+                single_pred_results['pts_instance_mask'])
+            pred_instance_labels.append(single_pred_results['instance_labels'])
+            pred_instance_scores.append(single_pred_results['instance_scores'])
+
+        ret_dict = instance_seg_eval(
+            gt_semantic_masks,
+            gt_instance_masks,
+            pred_instance_masks,
+            pred_instance_labels,
+            pred_instance_scores,
+            valid_class_ids=self.valid_class_ids,
+            class_labels=self.classes,
+            logger=logger)
+
+        return ret_dict

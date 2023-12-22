@@ -4,6 +4,7 @@ _base_ = [
 ]
 custom_imports = dict(imports=['oneformer3d'])
 
+# model settings
 num_channels = 32
 num_instance_classes = 18
 num_semantic_classes = 20
@@ -73,6 +74,7 @@ model = dict(
         matrix_nms_kernel='linear',
         stuff_classes=[0, 1]))
 
+# dataset settings
 dataset_type = 'ScanNetSegDataset_'
 data_prefix = dict(
     pts='points',
@@ -80,7 +82,6 @@ data_prefix = dict(
     pts_semantic_mask='semantic_mask',
     sp_pts_mask='super_points')
 
-# dataset settings
 train_pipeline = [
     dict(
         type='LoadPointsFromFile',
@@ -163,6 +164,7 @@ test_pipeline = [
     dict(type='Pack3DDetInputs_', keys=['points', 'sp_pts_mask'])
 ]
 
+# run settings
 train_dataloader = dict(
     batch_size=4,
     num_workers=6,
@@ -194,7 +196,8 @@ label2cat = {i: name for i, name in enumerate(class_names)}
 metric_meta = dict(
     label2cat=label2cat,
     ignore_index=[num_semantic_classes],
-    classes=class_names)
+    classes=class_names,
+    dataset_name='ScanNet')
 
 sem_mapping = [
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 24, 28, 33, 34, 36, 39]
@@ -215,7 +218,6 @@ optim_wrapper = dict(
     optimizer=dict(type='AdamW', lr=0.0001, weight_decay=0.05),
     clip_grad=dict(max_norm=10, norm_type=2))
 
-# learning rate
 param_scheduler = dict(type='PolyLR', begin=0, end=512, power=0.9)
 
 custom_hooks = [dict(type='EmptyCacheHook', after_iter=True)]
@@ -224,7 +226,6 @@ default_hooks = dict(
 
 load_from = 'work_dirs/tmp/sstnet_scannet.pth'
 
-# training schedule for 1x
 train_cfg = dict(
     type='EpochBasedTrainLoop',
     max_epochs=512,
