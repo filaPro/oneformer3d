@@ -47,7 +47,7 @@ Important notes:
 
 #### ScanNet
 
-For ScanNet we present the model with [SpConv](https://github.com/traveller59/spconv) backbone, superpoint pooling, selecting all queries, and predicting semantics directly from instance queries. Backbone is initialized from [SSTNet](https://github.com/Gorilla-Lab-SCUT/SSTNet) checkpoint. It should be [downloaded](https://github.com/filapro/oneformer3d/releases/download/v1.0/sstnet_scannet.pth) and put to `work_dirs/tmp` before training.
+For ScanNet we present the model with [SpConv](https://github.com/traveller59/spconv) backbone, superpoint pooling, selecting all queries, and predicting semantics directly from instance queries. Backbone is initialized from [SSTNet](https://github.com/Gorilla-Lab-SCUT/SSTNet) checkpoint. It should be [downloaded](https://github.com/oneformer3d/oneformer3d/releases/download/v1.0/sstnet_scannet.pth) and put to `work_dirs/tmp` before training.
 
 ```shell
 # train (with validation)
@@ -63,7 +63,7 @@ python tools/test.py configs/oneformer3d_1xb4_scannet.py \
 
 #### ScanNet200
 
-For ScanNet200 we present the model with [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) backbone, superpoint pooling, selecting all queries, and predicting semantics directly from instance queries. Backbone is initialized from [Mask3D](https://github.com/JonasSchult/Mask3D) checkpoint. It should be [downloaded](https://github.com/filapro/oneformer3d/releases/download/v1.0/mask3d_scannet200.pth) and put to `work_dirs/tmp` before training.
+For ScanNet200 we present the model with [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) backbone, superpoint pooling, selecting all queries, and predicting semantics directly from instance queries. Backbone is initialized from [Mask3D](https://github.com/JonasSchult/Mask3D) checkpoint. It should be [downloaded](https://github.com/oneformer3d/oneformer3d/releases/download/v1.0/mask3d_scannet200.pth) and put to `work_dirs/tmp` before training.
 
 ```shell
 # train (with validation)
@@ -75,7 +75,7 @@ python tools/test.py configs/oneformer3d_1xb4_scannet200.py \
 
 #### S3DIS
 
-For S3DIS we present the model with [SpConv](https://github.com/traveller59/spconv) backbone, w/o superpoint pooling, w/o query selection, and with separate semantic queries. Backbone is pretrained on Structured3D and ScanNet. It can be [downloaded](https://github.com/filapro/oneformer3d/releases/download/v1.0/instance-only-oneformer3d_1xb2_scannet-and-structured3d.pth) and put to `work_dirs/tmp` before training or trained with our code. We train the model on Areas 1, 2, 3, 4, 6 and test on Area 5. To change this split feel free to modify `train_area` and `test_area` parameters in config.
+For S3DIS we present the model with [SpConv](https://github.com/traveller59/spconv) backbone, w/o superpoint pooling, w/o query selection, and with separate semantic queries. Backbone is pretrained on Structured3D and ScanNet. It can be [downloaded](https://github.com/oneformer3d/oneformer3d/releases/download/v1.0/instance-only-oneformer3d_1xb2_scannet-and-structured3d.pth) and put to `work_dirs/tmp` before training or trained with our code. We train the model on Areas 1, 2, 3, 4, 6 and test on Area 5. To change this split feel free to modify `train_area` and `test_area` parameters in config.
 
 ```shell
 # pre-train
@@ -99,9 +99,9 @@ Metric values in the table are given for the provided checkpoints and may vary a
 
 | Dataset | mAP<sub>25</sub> | mAP<sub>50</sub> | mAP | mIoU | PQ | Download |
 |:-------:|:----------------:|:----------------:|:---:|:----:|:--:|:--------:|
-| ScanNet | 86.7 | 78.8 | 59.3 | 76.4 | 70.7 | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet.log) &#124; [config](configs/oneformer3d_1xb4_scannet.py) |
-| ScanNet200 | 44.6 | 40.9 | 30.2 | 29.4 | 29.7 | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet200.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet200.log) &#124; [config](configs/oneformer3d_1xb4_scannet200.py) |
-| S3DIS | 80.6 | 72.7 | 58.0 | 71.9 | 64.6 | [model](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb2_s3dis-area-5.pth) &#124; [log](https://github.com/filapro/oneformer3d/releases/download/v1.0/oneformer3d_1xb2_s3dis-area-5.log) &#124; [config](configs/oneformer3d_1xb2_s3dis-area-5.py) |
+| ScanNet | 86.7 | 78.8 | 59.3 | 76.4 | 70.7 | [model](https://github.com/oneformer3d/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet.pth) &#124; [log](https://github.com/oneformer3d/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet.log) &#124; [config](configs/oneformer3d_1xb4_scannet.py) |
+| ScanNet200 | 44.6 | 40.9 | 30.2 | 29.4 | 29.7 | [model](https://github.com/oneformer3d/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet200.pth) &#124; [log](https://github.com/oneformer3d/oneformer3d/releases/download/v1.0/oneformer3d_1xb4_scannet200.log) &#124; [config](configs/oneformer3d_1xb4_scannet200.py) |
+| S3DIS | 80.6 | 72.7 | 58.0 | 71.9 | 64.6 | [model](https://github.com/oneformer3d/oneformer3d/releases/download/v1.0/oneformer3d_1xb2_s3dis-area-5.pth) &#124; [log](https://github.com/oneformer3d/oneformer3d/releases/download/v1.0/oneformer3d_1xb2_s3dis-area-5.log) &#124; [config](configs/oneformer3d_1xb2_s3dis-area-5.py) |
 
 ### Example Predictions
 
