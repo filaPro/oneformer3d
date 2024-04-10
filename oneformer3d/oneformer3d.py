@@ -706,48 +706,6 @@ class S3DISOneFormer3D(Base3DDetector):
         Returns:
             dict: A dictionary of loss components.
         """
-        batch_offsets = [0]
-        superpoint_bias = 0
-        sp_gt_instances = []
-        sp_pts_masks = []
-        for i in range(len(batch_data_samples)):
-            gt_pts_seg = batch_data_samples[i].gt_pts_seg
-
-            gt_pts_seg.sp_pts_mask += superpoint_bias
-            superpoint_bias = gt_pts_seg.sp_pts_mask.max().item() + 1
-            batch_offsets.append(superpoint_bias)
-
-            sp_gt_instances.append(batch_data_samples[i].gt_instances_3d)
-            sp_pts_masks.append(gt_pts_seg.sp_pts_mask)
-
-        coordinates, features, inverse_mapping, spatial_shape = self.collate(
-            batch_inputs_dict['points'],
-            batch_inputs_dict.get('elastic_coords', None))
-        x = spconv.SparseConvTensor(
-            features, coordinates, spatial_shape, len(batch_data_samples))
-
-        sp_pts_masks = torch.hstack(sp_pts_masks)
-
-        x = self.extract_feat(
-            x, sp_pts_masks, inverse_mapping, batch_offsets)
-        queries, sp_gt_instances = self._select_queries(x, sp_gt_instances)
-        x = self.decoder(x, queries)
-
-        loss = self.criterion(x, sp_gt_instances)
-        return loss
-
-    def loss(self, batch_inputs_dict, batch_data_samples, **kwargs):
-        """Calculate losses from a batch of inputs dict and data samples.
-
-        Args:
-            batch_inputs_dict (dict): The model input dict which include
-                `points` key.
-            batch_data_samples (List[:obj:`Det3DDataSample`]): The Data
-                Samples. It includes information such as
-                `gt_instances_3d` and `gt_sem_seg_3d`.
-        Returns:
-            dict: A dictionary of loss components.
-        """
 
         coordinates, features, inverse_mapping, spatial_shape = self.collate(
             batch_inputs_dict['points'],
