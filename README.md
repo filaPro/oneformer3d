@@ -114,11 +114,11 @@ Metric values in the table are given for the provided checkpoints and may vary a
 If you find this work useful for your research, please cite our paper:
 
 ```
-@misc{kolodiazhnyi2023oneformer3d,
-  url = {https://arxiv.org/abs/2311.14405},
-  author = {Kolodiazhnyi, Maxim and Vorontsova, Anna and Konushin, Anton and Rukhovich, Danila},
-  title = {OneFormer3D: One Transformer for Unified Point Cloud Segmentation},
-  publisher = {arXiv},
-  year = {2023}
+@inproceedings{kolodiazhnyi2024oneformer3d,
+  title={Oneformer3d: One transformer for unified point cloud segmentation},
+  author={Kolodiazhnyi, Maxim and Vorontsova, Anna and Konushin, Anton and Rukhovich, Danila},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={20943--20953},
+  year={2024}
 }
 ```
