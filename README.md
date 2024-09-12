@@ -1,6 +1,7 @@
 ## OneFormer3D: One Transformer for Unified Point Cloud Segmentation
 
 **News**:
+ * September, 2024. We release state-of-the-art 3D object detector [UniDet3D](https://github.com/filapro/unidet3d) based on OneFormer3D.
  * :fire: February, 2024. Oneformer3D is now accepted at CVPR 2024.
  * :fire: November, 2023. OneFormer3D achieves state-of-the-art in
    * 3D instance segmentation on ScanNet ([hidden test](https://kaldir.vc.in.tum.de/scannet_benchmark/semantic_instance_3d))
